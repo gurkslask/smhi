@@ -3,16 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"sync"
+	"os"
+	"path"
 	"time"
 )
 
 type data struct {
-	Date    int
+	//Date    int
 	Value   float32
 	Quality string
 }
@@ -28,57 +28,96 @@ type values struct {
 func (v values) String() string {
 	var ret string
 	for key, _ := range v.Value {
-		ret += fmt.Sprintf("Date: %v, Value %v, Quality: %v\n", v.Value[key].Date, v.Value[key].Value, v.Value[key].Quality)
+		//ret += fmt.Sprintf("Date: %v, Value %v, Quality: %v\n", v.Value[key].Date, v.Value[key].Value, v.Value[key].Quality)
+		ret += fmt.Sprintf("Value %v, Quality: %v\n", v.Value[key].Value, v.Value[key].Quality)
 	}
 	ret += fmt.Sprintf("Key: %v, Name: %v", v.Station.Key, v.Station.Name)
 	return ret
 }
 
 type safevalues struct {
-	v   values
-	mux sync.Mutex
+	v values
 }
 
-var s safevalues
+const dataFolderPath = "C:\\tmp\\smhi"
+const loopTime = time.Second * 15
 
 func (sv *safevalues) GetWaterFlow() {
 	for {
 		url := "https://opendata-download-hydroobs.smhi.se/api/version/latest/parameter/1/station/855/period/latest-hour/data.json"
 		resp, err := http.Get(url)
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
+			sv.errorFileHandler(1)
+			time.Sleep(loopTime)
+			continue
 		}
 		defer resp.Body.Close()
 
 		var b []byte
 		b, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
+			sv.errorFileHandler(1)
+			time.Sleep(loopTime)
+			continue
 		}
 
-		sv.mux.Lock()
 		err = json.Unmarshal(b, &sv.v)
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
+			sv.errorFileHandler(1)
+			time.Sleep(loopTime)
+			continue
 		}
-		sv.mux.Unlock()
-		time.Sleep(time.Hour * 1)
+		sv.fileHandler()
+		sv.errorFileHandler(0)
+		time.Sleep(loopTime)
 	}
 }
 func main() {
-	go s.GetWaterFlow()
-	http.HandleFunc("/", roothandler)
-	http.HandleFunc("/data", datahandler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	os.Mkdir(dataFolderPath, 0777)
+	f, err := os.OpenFile(path.Join(dataFolderPath, "log"), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		fmt.Println("Error opening log file", err)
+	}
+
+	defer f.Close()
+
+	log.SetOutput(f)
+	var s safevalues
+	s.GetWaterFlow()
+
 }
 
-func roothandler(w http.ResponseWriter, r *http.Request) {
-	t, _ := template.ParseFiles("index.html")
-	t.Execute(w, nil)
+func (sv *safevalues) fileHandler() {
+	var filenameFlow string = "flode1.txt"
+
+	var b []byte = []byte(fmt.Sprintf("%.3f", sv.v.Value[0].Value))
+
+	err := ioutil.WriteFile(path.Join(dataFolderPath, filenameFlow), b, 0777)
+	if err != nil {
+		log.Print("Error writing to file", err)
+		sv.errorFileHandler(1)
+	}
+
 }
 
-func datahandler(w http.ResponseWriter, r *http.Request) {
-	s.mux.Lock()
-	json.NewEncoder(w).Encode(s.v)
-	s.mux.Unlock()
+func (sv *safevalues) errorFileHandler(e int) {
+	var filenameError string = "error.txt"
+	var s string = ""
+
+	if e == 1 {
+		s = "true"
+	}
+	if e == 0 {
+		s = "false"
+	}
+	var b []byte = []byte(string(s))
+
+	err := ioutil.WriteFile(path.Join(dataFolderPath, filenameError), b, 0777)
+	if err != nil {
+		log.Print("Error writing to errorfile", err)
+	}
+
 }

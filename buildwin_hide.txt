@@ -1,0 +1,2 @@
+GOOS=windows GOARCH=386 go build -ldflags "-H windowsgui" -o datacollector.exe main.go
+
