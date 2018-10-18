@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/getlantern/systray"
+	"github.com/getlantern/systray/example/icon"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -76,6 +78,20 @@ func (sv *safevalues) GetWaterFlow() {
 	}
 }
 func main() {
+	systray.Run(onReady, onExit)
+
+}
+
+func onReady() {
+	systray.SetTitle("Datacollector")
+	systray.SetTooltip("Datacollector SMHI")
+	systray.SetIcon(icon.Data)
+	mQuit := systray.AddMenuItem("Quit", "Quit application")
+
+	go func() {
+		<-mQuit.ClickedCh
+		systray.Quit()
+	}()
 	os.Mkdir(dataFolderPath, 0777)
 	f, err := os.OpenFile(path.Join(dataFolderPath, "log"), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
@@ -87,7 +103,9 @@ func main() {
 	log.SetOutput(f)
 	var s safevalues
 	s.GetWaterFlow()
+}
 
+func onExit() {
 }
 
 func (sv *safevalues) fileHandler() {
