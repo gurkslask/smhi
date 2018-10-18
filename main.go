@@ -39,7 +39,7 @@ type safevalues struct {
 	v values
 }
 
-const dataFolderPath = "C:\\tmp\\smhi"
+const dataFolderPath = "C:\\smhi"
 const loopTime = time.Second * 15
 
 func (sv *safevalues) GetWaterFlow() {
