@@ -44,14 +44,12 @@ const dataFolderPath = "C:\\smhi"
 const loopTime = time.Second * 15
 
 func (sv *safevalues) GetWaterFlow() {
-	for {
 		url := "https://opendata-download-hydroobs.smhi.se/api/version/latest/parameter/1/station/855/period/latest-hour/data.json"
 		resp, err := http.Get(url)
 		if err != nil {
 			log.Print(err)
 			sv.errorFileHandler(1)
 			time.Sleep(loopTime)
-			continue
 		}
 		defer resp.Body.Close()
 
@@ -61,7 +59,6 @@ func (sv *safevalues) GetWaterFlow() {
 			log.Print(err)
 			sv.errorFileHandler(1)
 			time.Sleep(loopTime)
-			continue
 		}
 
 		err = json.Unmarshal(b, &sv.v)
@@ -69,12 +66,10 @@ func (sv *safevalues) GetWaterFlow() {
 			log.Print(err)
 			sv.errorFileHandler(1)
 			time.Sleep(loopTime)
-			continue
 		}
 		sv.fileHandler()
 		sv.errorFileHandler(0)
 		time.Sleep(loopTime)
-	}
 }
 func main() {
 	systray.Run(onReady, onExit)
@@ -101,7 +96,12 @@ func onReady() {
 
 	log.SetOutput(f)
 	var s safevalues
-	s.GetWaterFlow()
+        go func() {
+            for {
+                s.GetWaterFlow()
+                time.Sleep(loopTime)
+            }
+        }()
 }
 
 func onExit() {
