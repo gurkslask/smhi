@@ -1,0 +1,42 @@
+<!DOCtype html>
+<html>
+    <head>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+
+
+        <script >
+
+            $(document).ready(function(){
+            var iii = 1
+             function func1 (){
+                $.getJSON("data", function(result){
+                    $("#StationName").text(result["Station"].Name)
+                    $("#Value").text("Flöde: " + result["Value"][0].Value + " m3/h")
+
+                    d = new Date(result["Value"][0].Date)
+                    hour = d.getHours()
+                    minute = d.getMinutes()
+                    second = d.getSeconds()
+                    var timestring = hour + ":" + minute + ":" + second 
+                    $("#LastUpdate").text("Senast uppdaterad från SMHI: " + timestring)
+
+                })
+                }
+                func1()
+                var myvar = setInterval(func1, 1000)
+                
+            })
+            </script>
+        </head>
+        <body style="background-color:darkgray">
+            <title>Mätdata flöde</title>
+            <div class="container" style="background-color:lightgray;border:2px solid black">
+                <div class="col-sm" style="background-color:lightgray">
+                    <h1><p id="StationName">StationName</p></h1>
+                    <h2><p id="Value">Value</p></h2>
+                    <p id="LastUpdate">LLastUpdate</p>
+                </div>
+            </div>
+        </body>
+        </html>
